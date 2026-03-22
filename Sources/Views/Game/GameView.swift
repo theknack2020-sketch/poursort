@@ -6,6 +6,7 @@ struct GameView: View {
     @State private var showWin = false
     @State private var showStuck = false
     @State private var showPro = false
+    @State private var showTutorial = false
     @Namespace private var ballNamespace
     @Environment(\.dismiss) private var dismiss
 
@@ -29,6 +30,9 @@ struct GameView: View {
         .onAppear {
             let config = levelManager.configForLevel(levelNumber)
             engine.loadLevel(config)
+            if levelNumber == 1 && !UserDefaults.standard.bool(forKey: "ps_tutorial_done") {
+                showTutorial = true
+            }
         }
         .onChange(of: engine.isComplete) { _, complete in
             if complete {
@@ -56,6 +60,42 @@ struct GameView: View {
         }
         .sheet(isPresented: $showPro) {
             ProUpgradeView()
+        }
+        .overlay {
+            if showTutorial {
+                ZStack {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        Image(systemName: "hand.tap.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color.pourPrimary)
+
+                        Text("How to Play")
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(.white)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            tutorialStep("1", "Tap a tube to pick up the top ball")
+                            tutorialStep("2", "Tap another tube to place it")
+                            tutorialStep("3", "Same color balls only — or empty tube")
+                            tutorialStep("4", "Fill each tube with one color to win!")
+                        }
+
+                        Button {
+                            showTutorial = false
+                            UserDefaults.standard.set(true, forKey: "ps_tutorial_done")
+                        } label: {
+                            Text("Got It!")
+                                .font(.headline)
+                                .frame(width: 160, height: 48)
+                                .foregroundStyle(.white)
+                                .background(Color.pourPrimary, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                    }
+                    .padding(32)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+                }
+            }
         }
     }
 
@@ -188,6 +228,19 @@ struct GameView: View {
     }
 
     // MARK: - Win Overlay
+
+    private func tutorialStep(_ num: String, _ text: String) -> some View {
+        HStack(spacing: 12) {
+            Text(num)
+                .font(.caption.weight(.bold))
+                .frame(width: 24, height: 24)
+                .background(Color.pourPrimary, in: Circle())
+                .foregroundStyle(.white)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(Color.pourTextSecondary)
+        }
+    }
 
     private var winOverlay: some View {
         ZStack {

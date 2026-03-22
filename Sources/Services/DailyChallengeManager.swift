@@ -26,8 +26,10 @@ final class DailyChallengeManager {
 
     /// Generate today's challenge config
     var todayConfig: LevelConfig {
-        // Daily challenges: moderate difficulty (5-7 colors)
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        // Use UTC day-of-year for consistent difficulty worldwide
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let dayOfYear = utcCalendar.ordinality(of: .day, in: .year, for: Date()) ?? 1
         let colorCount = 5 + (dayOfYear % 3) // 5, 6, or 7 colors
 
         return LevelConfig(

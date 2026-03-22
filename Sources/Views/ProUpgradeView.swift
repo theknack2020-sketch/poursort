@@ -33,9 +33,6 @@ struct ProUpgradeView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             featureRow(icon: "arrow.uturn.backward.circle.fill", title: "Unlimited Undo", desc: "Take back as many moves as you need")
                             featureRow(icon: "plus.circle.fill", title: "Unlimited Extra Tubes", desc: "Add tubes whenever you're stuck")
-                            featureRow(icon: "paintpalette.fill", title: "All Themes", desc: "Unlock beautiful color themes")
-                            featureRow(icon: "calendar.badge.clock", title: "Daily Challenge Stats", desc: "Track your daily streak and history")
-                            featureRow(icon: "chart.bar.fill", title: "Detailed Statistics", desc: "See your solve times and move counts")
                             featureRow(icon: "nosign", title: "No Ads. Ever.", desc: "PourSort never shows ads — Pro or free")
                         }
                         .padding(.horizontal, 24)

@@ -28,7 +28,7 @@ struct TubeView: View {
 
             // Balls
             VStack(spacing: 4) {
-                ForEach(tube.balls) { ball in
+                ForEach(tube.balls.reversed()) { ball in
                     BallView(ball: ball)
                         .matchedGeometryEffect(id: ball.id, in: namespace)
                 }

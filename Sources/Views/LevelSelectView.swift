@@ -49,7 +49,7 @@ struct LevelSelectView: View {
                 .foregroundStyle(Color.pourTextPrimary)
 
             LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(startLevel...min(endLevel, startLevel + 24), id: \.self) { level in
+                ForEach(startLevel...min(endLevel, startLevel + 99), id: \.self) { level in
                     let isUnlocked = level <= levelManager.highestLevel
                     let isCurrent = level == levelManager.currentLevelNumber
 
