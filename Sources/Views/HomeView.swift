@@ -115,6 +115,14 @@ struct HomeView: View {
             .sheet(isPresented: $showPro) {
                 ProUpgradeView()
             }
+            .onAppear {
+                if UserDefaults.standard.bool(forKey: "ps_auto_play") {
+                    UserDefaults.standard.set(false, forKey: "ps_auto_play")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showGame = true
+                    }
+                }
+            }
         }
     }
 }
