@@ -80,6 +80,14 @@ struct HomeView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.pourTextSecondary)
 
+                        NavigationLink {
+                            SettingsView()
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.pourTextSecondary)
+                        }
+
                         if !store.isPro {
                             Button {
                                 showPro = true

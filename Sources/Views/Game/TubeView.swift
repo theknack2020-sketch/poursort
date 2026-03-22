@@ -3,6 +3,7 @@ import SwiftUI
 struct TubeView: View {
     let tube: Tube
     let isSelected: Bool
+    let isComplete: Bool
     let namespace: Namespace.ID
 
     var body: some View {
@@ -13,11 +14,17 @@ struct TubeView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(
-                            isSelected ? Color.pourPrimary : Color.white.opacity(0.1),
-                            lineWidth: isSelected ? 2 : 1
+                            isComplete ? Color.green.opacity(0.6) :
+                            isSelected ? Color.pourPrimary :
+                            Color.white.opacity(0.1),
+                            lineWidth: isSelected || isComplete ? 2 : 1
                         )
                 )
-                .shadow(color: isSelected ? Color.pourPrimary.opacity(0.3) : .clear, radius: 8)
+                .shadow(
+                    color: isComplete ? Color.green.opacity(0.3) :
+                           isSelected ? Color.pourPrimary.opacity(0.3) : .clear,
+                    radius: 8
+                )
 
             // Balls
             VStack(spacing: 4) {
@@ -30,12 +37,15 @@ struct TubeView: View {
             .padding(.vertical, 8)
         }
         .frame(height: CGFloat(tube.capacity) * 38 + 20)
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(.spring(response: 0.5), value: isComplete)
     }
 }
 
 struct BallView: View {
     let ball: Ball
+    @Environment(\.accessibilityDifferentiateWithoutColor) var differentiateWithoutColor
 
     var body: some View {
         ZStack {
@@ -66,6 +76,13 @@ struct BallView: View {
                 )
                 .frame(width: 14, height: 14)
                 .offset(x: -4, y: -4)
+
+            // Accessibility symbol overlay
+            if differentiateWithoutColor {
+                Image(systemName: ball.ballColor.symbol)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
         }
         .frame(width: 30, height: 30)
     }

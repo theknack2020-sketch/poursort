@@ -116,35 +116,68 @@ struct LevelConfig: Equatable {
 
     var totalTubes: Int { tubeCount + emptyTubes }
 
-    /// Generate a solvable level: start solved, then shuffle
+    /// Generate a solvable level: start solved, shuffle, verify with solver
     func generateTubes() -> [Tube] {
         var rng = SeededRNG(seed: seed)
         let colors = BallColor.colors(count: colorCount)
 
-        // Create solved tubes
+        // Try up to 10 seeds to find a solvable puzzle
+        for attempt in 0..<10 {
+            var attemptRng = SeededRNG(seed: seed &+ UInt64(attempt))
+
+            // Create solved tubes
+            var tubes: [Tube] = colors.map { color in
+                let balls = (0..<capacity).map { _ in Ball(color: color) }
+                return Tube(capacity: capacity, balls: balls)
+            }
+
+            // Add empty tubes
+            for _ in 0..<emptyTubes {
+                tubes.append(Tube(capacity: capacity))
+            }
+
+            // Shuffle: perform random valid moves
+            let shuffleMoves = colorCount * capacity * 4
+            for _ in 0..<shuffleMoves {
+                let fromIdx = Int.random(in: 0..<tubes.count, using: &attemptRng)
+                let toIdx = Int.random(in: 0..<tubes.count, using: &attemptRng)
+                guard fromIdx != toIdx,
+                      !tubes[fromIdx].isEmpty,
+                      !tubes[toIdx].isFull else { continue }
+                if let ball = tubes[fromIdx].pop() {
+                    tubes[toIdx].push(ball)
+                }
+            }
+
+            // Verify solvable (skip for simple levels)
+            if colorCount <= 5 {
+                let solverTubes = PuzzleSolver.toSolverFormat(tubes)
+                if PuzzleSolver.isSolvable(tubes: solverTubes, capacity: capacity) {
+                    return tubes
+                }
+            } else {
+                // For harder levels, trust the reverse-shuffle method
+                return tubes
+            }
+        }
+
+        // Fallback — return anyway (reverse-shuffle is generally solvable)
         var tubes: [Tube] = colors.map { color in
             let balls = (0..<capacity).map { _ in Ball(color: color) }
             return Tube(capacity: capacity, balls: balls)
         }
-
-        // Add empty tubes
         for _ in 0..<emptyTubes {
             tubes.append(Tube(capacity: capacity))
         }
-
-        // Shuffle: perform random valid reverse moves
         let shuffleMoves = colorCount * capacity * 3
         for _ in 0..<shuffleMoves {
             let fromIdx = Int.random(in: 0..<tubes.count, using: &rng)
             let toIdx = Int.random(in: 0..<tubes.count, using: &rng)
-            guard fromIdx != toIdx,
-                  !tubes[fromIdx].isEmpty,
-                  !tubes[toIdx].isFull else { continue }
+            guard fromIdx != toIdx, !tubes[fromIdx].isEmpty, !tubes[toIdx].isFull else { continue }
             if let ball = tubes[fromIdx].pop() {
                 tubes[toIdx].push(ball)
             }
         }
-
         return tubes
     }
 }

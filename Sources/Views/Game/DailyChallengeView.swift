@@ -49,7 +49,7 @@ struct DailyChallengeView: View {
                         spacing: 12
                     ) {
                         ForEach(Array(engine.tubes.enumerated()), id: \.element.id) { index, tube in
-                            TubeView(tube: tube, isSelected: engine.selectedTubeIndex == index, namespace: ballNamespace)
+                            TubeView(tube: tube, isSelected: engine.selectedTubeIndex == index, isComplete: tube.isComplete, namespace: ballNamespace)
                                 .onTapGesture {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {

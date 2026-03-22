@@ -7,10 +7,22 @@ final class GameEngine {
     var selectedTubeIndex: Int? = nil
     var moveCount: Int = 0
     var isComplete: Bool = false
+    var isStuck: Bool = false
+    var lastMoveInvalid: Bool = false
     var undoStack: [Move] = []
 
     private var initialTubes: [Tube] = []
     private(set) var currentLevel: LevelConfig?
+
+    private let sound = SoundManager.shared
+    private let store = StoreManager.shared
+
+    // MARK: - Undo limit (free: 3 per level, Pro: unlimited)
+    var undoRemaining: Int {
+        if store.isPro { return 999 }
+        return max(0, 3 - undoUsedCount)
+    }
+    private var undoUsedCount: Int = 0
 
     // MARK: - Level Management
 
@@ -21,30 +33,44 @@ final class GameEngine {
         selectedTubeIndex = nil
         moveCount = 0
         isComplete = false
+        isStuck = false
+        lastMoveInvalid = false
         undoStack = []
+        undoUsedCount = 0
     }
 
     // MARK: - Moves
 
     func tapTube(at index: Int) {
         guard !isComplete else { return }
+        lastMoveInvalid = false
 
         if let selected = selectedTubeIndex {
             if selected == index {
                 // Deselect
                 selectedTubeIndex = nil
+                sound.playDeselect()
             } else if canMove(from: selected, to: index) {
                 performMove(from: selected, to: index)
                 selectedTubeIndex = nil
+                sound.playPour()
             } else if !tubes[index].isEmpty {
-                // Select new source
-                selectedTubeIndex = index
+                // Invalid move — try selecting new source
+                if tubes[index].topBall != nil {
+                    selectedTubeIndex = index
+                    sound.playSelect()
+                    lastMoveInvalid = true
+                }
             } else {
+                // Can't move to empty when rule doesn't allow
                 selectedTubeIndex = nil
+                sound.playInvalid()
+                lastMoveInvalid = true
             }
         } else {
-            if !tubes[index].isEmpty {
+            if !tubes[index].isEmpty && !tubes[index].isComplete {
                 selectedTubeIndex = index
+                sound.playSelect()
             }
         }
     }
@@ -74,16 +100,24 @@ final class GameEngine {
         undoStack.append(move)
 
         checkCompletion()
+        if !isComplete {
+            checkStuck()
+        }
     }
 
     // MARK: - Undo
 
     func undo() {
         guard let lastMove = undoStack.popLast() else { return }
+        guard undoRemaining > 0 else { return }
+
         _ = tubes[lastMove.toIndex].pop()
         tubes[lastMove.fromIndex].push(lastMove.ball)
         moveCount = max(0, moveCount - 1)
         isComplete = false
+        isStuck = false
+        undoUsedCount += 1
+        sound.playDeselect()
     }
 
     // MARK: - Restart
@@ -93,7 +127,10 @@ final class GameEngine {
         selectedTubeIndex = nil
         moveCount = 0
         isComplete = false
+        isStuck = false
+        lastMoveInvalid = false
         undoStack = []
+        undoUsedCount = 0
     }
 
     // MARK: - Extra Tube
@@ -101,6 +138,7 @@ final class GameEngine {
     func addExtraTube() {
         guard let config = currentLevel else { return }
         tubes.append(Tube(capacity: config.capacity))
+        isStuck = false
     }
 
     // MARK: - Win Check
@@ -109,5 +147,35 @@ final class GameEngine {
         isComplete = tubes.allSatisfy { tube in
             tube.isEmpty || tube.isComplete
         }
+        if isComplete {
+            sound.playSuccess()
+        }
+    }
+
+    // MARK: - Stuck Detection
+
+    private func checkStuck() {
+        // Check if any valid move exists
+        for i in 0..<tubes.count {
+            guard !tubes[i].isEmpty, !tubes[i].isComplete else { continue }
+            for j in 0..<tubes.count {
+                if canMove(from: i, to: j) {
+                    isStuck = false
+                    return
+                }
+            }
+        }
+        isStuck = true
+    }
+
+    /// Check if there are any valid moves
+    var hasValidMoves: Bool {
+        for i in 0..<tubes.count {
+            guard !tubes[i].isEmpty, !tubes[i].isComplete else { continue }
+            for j in 0..<tubes.count {
+                if canMove(from: i, to: j) { return true }
+            }
+        }
+        return false
     }
 }

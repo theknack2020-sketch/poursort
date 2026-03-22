@@ -4,27 +4,23 @@ struct GameView: View {
     let levelNumber: Int
     @State private var engine = GameEngine()
     @State private var showWin = false
+    @State private var showStuck = false
+    @State private var showPro = false
     @Namespace private var ballNamespace
     @Environment(\.dismiss) private var dismiss
 
     private let levelManager = LevelManager.shared
+    private let store = StoreManager.shared
 
     var body: some View {
         ZStack {
             Color.pourBackground.ignoresSafeArea()
 
             VStack(spacing: 16) {
-                // Top bar
                 topBar
-
                 Spacer()
-
-                // Game board
                 gameBoard
-
                 Spacer()
-
-                // Bottom controls
                 bottomControls
             }
             .padding()
@@ -36,17 +32,30 @@ struct GameView: View {
         }
         .onChange(of: engine.isComplete) { _, complete in
             if complete {
-                let impact = UINotificationFeedbackGenerator()
-                impact.notificationOccurred(.success)
-                withAnimation(.spring(response: 0.5)) {
-                    showWin = true
-                }
+                withAnimation(.spring(response: 0.5)) { showWin = true }
             }
         }
+        .onChange(of: engine.isStuck) { _, stuck in
+            if stuck { showStuck = true }
+        }
         .overlay {
-            if showWin {
-                winOverlay
+            if showWin { winOverlay }
+        }
+        .alert("No Moves Left", isPresented: $showStuck) {
+            Button("Undo Last Move") {
+                withAnimation { engine.undo() }
             }
+            Button("Restart Level") {
+                withAnimation { engine.restart() }
+            }
+            Button("Add Extra Tube") {
+                withAnimation { engine.addExtraTube() }
+            }
+        } message: {
+            Text("You're stuck! Try undoing, restarting, or adding an extra tube.")
+        }
+        .sheet(isPresented: $showPro) {
+            ProUpgradeView()
         }
     }
 
@@ -54,9 +63,7 @@ struct GameView: View {
 
     private var topBar: some View {
         HStack {
-            Button {
-                dismiss()
-            } label: {
+            Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
                     .foregroundStyle(Color.pourTextSecondary)
@@ -95,11 +102,10 @@ struct GameView: View {
                 TubeView(
                     tube: tube,
                     isSelected: engine.selectedTubeIndex == index,
+                    isComplete: tube.isComplete,
                     namespace: ballNamespace
                 )
                 .onTapGesture {
-                    let tap = UIImpactFeedbackGenerator(style: .light)
-                    tap.impactOccurred()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         engine.tapTube(at: index)
                     }
@@ -111,28 +117,38 @@ struct GameView: View {
     // MARK: - Bottom Controls
 
     private var bottomControls: some View {
-        HStack(spacing: 24) {
-            // Undo
+        HStack(spacing: 20) {
+            // Undo with counter
             Button {
-                withAnimation(.spring(response: 0.3)) {
-                    engine.undo()
+                if engine.undoRemaining > 0 {
+                    withAnimation(.spring(response: 0.3)) { engine.undo() }
+                } else if !store.isPro {
+                    showPro = true
                 }
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.title3)
-                    Text("Undo")
-                        .font(.caption2)
+                    HStack(spacing: 2) {
+                        Text("Undo")
+                            .font(.caption2)
+                        if !store.isPro {
+                            Text("(\(engine.undoRemaining))")
+                                .font(.caption2)
+                        }
+                    }
                 }
-                .foregroundStyle(engine.undoStack.isEmpty ? Color.pourTextSecondary.opacity(0.3) : Color.pourPrimary)
+                .foregroundStyle(
+                    engine.undoStack.isEmpty || engine.undoRemaining == 0
+                        ? Color.pourTextSecondary.opacity(0.3)
+                        : Color.pourPrimary
+                )
             }
-            .disabled(engine.undoStack.isEmpty)
+            .disabled(engine.undoStack.isEmpty && engine.undoRemaining > 0)
 
             // Restart
             Button {
-                withAnimation(.spring(response: 0.4)) {
-                    engine.restart()
-                }
+                withAnimation(.spring(response: 0.4)) { engine.restart() }
             } label: {
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.counterclockwise")
@@ -145,13 +161,23 @@ struct GameView: View {
 
             // Extra tube
             Button {
-                withAnimation(.spring(response: 0.3)) {
-                    engine.addExtraTube()
+                if store.isPro {
+                    withAnimation(.spring(response: 0.3)) { engine.addExtraTube() }
+                } else {
+                    showPro = true
                 }
             } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: "plus.circle")
-                        .font(.title3)
+                    ZStack {
+                        Image(systemName: "plus.circle")
+                            .font(.title3)
+                        if !store.isPro {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(Color.pourPrimary)
+                                .offset(x: 10, y: -10)
+                        }
+                    }
                     Text("Tube")
                         .font(.caption2)
                 }
