@@ -46,6 +46,7 @@ schemes:
         PourSort: all
     run:
       config: Debug
+      storeKitConfiguration: Products.storekit
     profile:
       config: Release
     analyze:

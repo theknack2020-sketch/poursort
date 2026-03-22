@@ -2,15 +2,19 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var showGame = false
+    @State private var showDaily = false
     @State private var showLevelSelect = false
+    @State private var showPro = false
     private let levelManager = LevelManager.shared
+    private let store = StoreManager.shared
+    private let daily = DailyChallengeManager.shared
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.pourBackground.ignoresSafeArea()
 
-                VStack(spacing: 32) {
+                VStack(spacing: 24) {
                     Spacer()
 
                     // Logo
@@ -41,24 +45,65 @@ struct HomeView: View {
                     } label: {
                         Text("Play")
                             .font(.title2.weight(.bold))
-                            .frame(width: 200, height: 56)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
                             .foregroundStyle(.white)
                             .background(Color.pourPrimary, in: RoundedRectangle(cornerRadius: 16))
                     }
+                    .padding(.horizontal, 40)
 
-                    // Level select
-                    Button("Select Level") {
-                        showLevelSelect = true
+                    // Daily challenge
+                    Button {
+                        showDaily = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "calendar")
+                            Text("Daily Challenge")
+                            if daily.isCompletedToday {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .foregroundStyle(Color.pourPrimary)
+                        .background(Color.pourSurface, in: RoundedRectangle(cornerRadius: 14))
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(Color.pourPrimary)
+                    .padding(.horizontal, 40)
+
+                    // Bottom row
+                    HStack(spacing: 32) {
+                        Button("Levels") {
+                            showLevelSelect = true
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Color.pourTextSecondary)
+
+                        if !store.isPro {
+                            Button {
+                                showPro = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "crown.fill")
+                                        .font(.caption)
+                                    Text("Pro")
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.pourPrimary)
+                            }
+                        }
+                    }
 
                     Spacer()
-                        .frame(height: 40)
+                        .frame(height: 32)
                 }
             }
             .navigationDestination(isPresented: $showGame) {
                 GameView(levelNumber: levelManager.currentLevelNumber)
+            }
+            .navigationDestination(isPresented: $showDaily) {
+                DailyChallengeView()
             }
             .sheet(isPresented: $showLevelSelect) {
                 LevelSelectView { level in
@@ -66,6 +111,9 @@ struct HomeView: View {
                     showLevelSelect = false
                     showGame = true
                 }
+            }
+            .sheet(isPresented: $showPro) {
+                ProUpgradeView()
             }
         }
     }
